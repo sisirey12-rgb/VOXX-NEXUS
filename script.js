@@ -1,102 +1,68 @@
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js";
-import {OrbitControls} from "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/controls/OrbitControls.js";
-import {GLTFLoader} from "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/loaders/GLTFLoader.js";
-import {EffectComposer} from "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/postprocessing/EffectComposer.js";
-import {RenderPass} from "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/postprocessing/RenderPass.js";
-import {UnrealBloomPass} from "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/postprocessing/UnrealBloomPass.js";
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/loaders/GLTFLoader.js';
+import {EffectComposer} from 'https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/postprocessing/EffectComposer.js';
+import {RenderPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/postprocessing/OutputPass.js';
 
-const canvas=document.querySelector("#webgl");
-const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);
-renderer.outputColorSpace=THREE.SRGBColorSpace;toneMapExposure=1;
 const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x02040a,.045);
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,100);camera.position.set(0,.1,7.4);
+scene.fog=new THREE.FogExp2(0x02050a,.055);
+const camera=new THREE.PerspectiveCamera(34,innerWidth/innerHeight,.1,100);
+camera.position.set(0,.15,8.2);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<700?1.45:1.8));
+renderer.setSize(innerWidth,innerHeight); renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.18;
+document.querySelector('#scene').appendChild(renderer.domElement);
+const composer=new EffectComposer(renderer); composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.15,.7,.72); composer.addPass(bloom); composer.addPass(new OutputPass());
+scene.add(new THREE.AmbientLight(0x26384a,1.2));
+const key=new THREE.PointLight(0x54dfff,55,16); key.position.set(2,2,4); scene.add(key);
+const fill=new THREE.PointLight(0x704dff,45,12); fill.position.set(-3,-1,2); scene.add(fill);
+const rim=new THREE.PointLight(0x2b8fff,35,14); rim.position.set(3,-2,-3); scene.add(rim);
 
-const composer=new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.15,.75,.18);
-composer.addPass(bloom);
-
-scene.add(new THREE.AmbientLight(0x26476d,1.3));
-const key=new THREE.PointLight(0x2de0ff,35,18);key.position.set(3,3,4);scene.add(key);
-const fill=new THREE.PointLight(0x8c50ff,28,18);fill.position.set(-4,-2,2);scene.add(fill);
-
-const nexus=new THREE.Group();scene.add(nexus);
-let asset;
-new GLTFLoader().load("./assets/voxx-core.gltf",g=>{
-  asset=g.scene; asset.scale.setScalar(1.35); nexus.add(asset);
-  asset.traverse(o=>{
-    if(o.isMesh){
-      o.material= new THREE.MeshPhysicalMaterial({
-        vertexColors:true,metalness:.9,roughness:.16,emissive:o.name.includes("Inner")?0x3800aa:0x003d88,
-        emissiveIntensity:1.3,clearcoat:1,clearcoatRoughness:.12
-      });
-    }
-  });
-},undefined,()=>{ /* visual fallback remains below */ });
-
-const fallback=new THREE.Mesh(new THREE.IcosahedronGeometry(1.15,2),
-  new THREE.MeshPhysicalMaterial({color:0x0a2852,metalness:.9,roughness:.14,emissive:0x064b98,emissiveIntensity:1.3,wireframe:false}));
-nexus.add(fallback);
-
-const shaderUniforms={uTime:{value:0},uColorA:{value:new THREE.Color("#11dfff")},uColorB:{value:new THREE.Color("#804cff")}};
-const shellMat=new THREE.ShaderMaterial({
- uniforms:shaderUniforms,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
- vertexShader:`varying vec3 vPos;varying vec3 vNormal;uniform float uTime;void main(){vPos=position;vNormal=normal;vec3 p=position+normal*sin(uTime*1.7+position.y*5.0)*0.035;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,
- fragmentShader:`varying vec3 vPos;varying vec3 vNormal;uniform vec3 uColorA;uniform vec3 uColorB;uniform float uTime;void main(){float edge=pow(1.0-max(dot(normalize(vNormal),normalize(cameraPosition-vPos)),0.0),2.2);float bands=0.5+0.5*sin(vPos.y*9.0-uTime*3.0);vec3 c=mix(uColorA,uColorB,bands);gl_FragColor=vec4(c,edge*.75);}`
-});
-const shell=new THREE.Mesh(new THREE.IcosahedronGeometry(1.42,3),shellMat);nexus.add(shell);
-
-const rings=new THREE.Group();nexus.add(rings);
-for(let i=0;i<7;i++){
- const r=new THREE.Mesh(new THREE.TorusGeometry(1.65+i*.13,.008,8,180),
-   new THREE.MeshBasicMaterial({color:i%2?0x8555ff:0x22dfff,transparent:true,opacity:.48,blending:THREE.AdditiveBlending}));
- r.rotation.set(Math.random()*2,Math.random()*2,Math.random()*2);r.userData.speed=(i%2?-.0012:.0015)*(1+i*.12);rings.add(r);
+const root=new THREE.Group(); root.rotation.set(.08,-.25,0); scene.add(root);
+let model=null;
+const fallback=new THREE.Group(); root.add(fallback);
+function makeFallback(){
+ const mats=[new THREE.MeshPhysicalMaterial({color:0x091522,metalness:1,roughness:.18}),new THREE.MeshPhysicalMaterial({color:0x46dcff,metalness:.35,roughness:.1,emissive:0x0a6bff,emissiveIntensity:3}),new THREE.MeshPhysicalMaterial({color:0x663dff,metalness:.3,roughness:.12,emissive:0x4318ff,emissiveIntensity:2.2})];
+ for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(1.45-i*.3,3),mats[i]);fallback.add(m)}
+ for(let i=0;i<3;i++){const r=new THREE.Mesh(new THREE.TorusGeometry(1.8+i*.22,.025,10,128),mats[i+1]);r.rotation.set(i*.8,i*.55,i*.3);fallback.add(r)}
+ for(let i=0;i<18;i++){const a=i*Math.PI*2/18;const g=new THREE.BoxGeometry(.16,.5,.16);const m=new THREE.Mesh(g,mats[i%2]);m.position.set(Math.cos(a)*1.6,Math.sin(a)*1.6,Math.sin(i)*.18);m.rotation.z=a;fallback.add(m)}
 }
+makeFallback();
+new GLTFLoader().load('./assets/voxx-nexus-core-v3.glb',g=>{model=g.scene; model.scale.setScalar(1.18); model.rotation.set(.12,0,0); root.add(model); fallback.visible=false;},undefined,()=>{fallback.visible=true});
 
-const pCount=2600,pPos=new Float32Array(pCount*3);
-for(let i=0;i<pCount;i++){const r=THREE.MathUtils.randFloat(3.2,16),a=Math.random()*Math.PI*2;pPos[i*3]=Math.cos(a)*r;pPos[i*3+1]=THREE.MathUtils.randFloatSpread(12);pPos[i*3+2]=THREE.MathUtils.randFloat(-8,3);}
-const pg=new THREE.BufferGeometry();pg.setAttribute("position",new THREE.BufferAttribute(pPos,3));
-scene.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x4fc9ff,size:.014,transparent:true,opacity:.6,blending:THREE.AdditiveBlending})));
+// orbital rings + data particles
+const orbitGroup=new THREE.Group(); root.add(orbitGroup);
+for(let i=0;i<5;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(2.0+i*.34,.012+(i%2)*.009,8,160),new THREE.MeshBasicMaterial({color:i%2?0x8c64ff:0x55e9ff,transparent:true,opacity:.32}));ring.rotation.set(.45+i*.37,.25+i*.23,i*.6);orbitGroup.add(ring)}
+const particleCount=innerWidth<700?650:1400; const pos=new Float32Array(particleCount*3); const col=new Float32Array(particleCount*3);
+for(let i=0;i<particleCount;i++){const r=THREE.MathUtils.lerp(3.2,12,Math.random());const a=Math.random()*Math.PI*2;const y=(Math.random()-.5)*8;pos[i*3]=Math.cos(a)*r;pos[i*3+1]=y;pos[i*3+2]=Math.sin(a)*r;const c=Math.random()>.82?new THREE.Color(0x9a69ff):new THREE.Color(0x51ddff);col.set([c.r,c.g,c.b],i*3)}
+const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pos,3));pg.setAttribute('color',new THREE.BufferAttribute(col,3));const pts=new THREE.Points(pg,new THREE.PointsMaterial({size:innerWidth<700?.018:.025,vertexColors:true,transparent:true,opacity:.65,depthWrite:false}));scene.add(pts);
 
-const controls=new OrbitControls(camera,renderer.domElement);
-controls.enableZoom=false;controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.05;controls.autoRotate=false;controls.minPolarAngle=1.15;controls.maxPolarAngle=2.0;
-let targetCam=new THREE.Vector3(0,.1,7.4), targetLook=new THREE.Vector3(0,0,0), scroll=0;
-const sections=[...document.querySelectorAll(".scene-section")];
-const mode=document.querySelector("#mode"),pct=document.querySelector("#progress");
-const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)mode.textContent=e.target.dataset.mode}),{threshold:.45});sections.forEach(s=>obs.observe(s));
+let targetX=0,targetY=0,scroll=0; let currentX=0,currentY=0;
+addEventListener('pointermove',e=>{targetX=(e.clientX/innerWidth-.5);targetY=(e.clientY/innerHeight-.5)});
+addEventListener('scroll',()=>scroll=scrollY);
+const sections=[...document.querySelectorAll('.panel')];
+const links=[...document.querySelectorAll('.rail a')];
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.querySelectorAll('.reveal').forEach(x=>x.classList.add('show'));const id=e.target.id;links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+id))}}),{threshold:.18});
+sections.forEach(s=>obs.observe(s));
+const menu=document.querySelector('#menuBtn'),rail=document.querySelector('#rail');menu.onclick=()=>rail.classList.toggle('open');links.forEach(l=>l.onclick=()=>rail.classList.remove('open'));
 
-function updateChoreography(){
- const max=document.documentElement.scrollHeight-innerHeight;scroll=max?scrollY/max:0;pct.textContent=Math.round(scroll*100).toString().padStart(3,"0")+"%";
- const y=scroll*Math.PI*2.7;
- nexus.rotation.y=y*.55;nexus.rotation.z=Math.sin(y*.7)*.12;
- const tx=Math.sin(y*.8)*.9, ty=Math.cos(y*.55)*.55;
- targetCam.set(tx,ty,7.4-Math.sin(y*.7)*.65);targetLook.set(Math.sin(y)*.3,Math.cos(y*.7)*.2,0);
-}
-addEventListener("scroll",updateChoreography,{passive:true});updateChoreography();
+let t0=performance.now();
+function animate(t){requestAnimationFrame(animate);const time=t*.001;currentX+=(targetX-currentX)*.035;currentY+=(targetY-currentY)*.035;
+ root.rotation.y += .0025; root.rotation.x=.08+currentY*.08; root.position.x=currentX*.55; root.position.y=currentY*.3;
+ orbitGroup.rotation.z+=.0018; orbitGroup.rotation.x=Math.sin(time*.16)*.08;
+ pts.rotation.y=time*.008; pts.rotation.x=Math.sin(time*.1)*.015;
+ key.position.x=2+currentX*2; key.position.y=2-currentY*1.5;
+ const sectionIndex=Math.min(sections.length-1,Math.floor((scroll+innerHeight*.35)/innerHeight));
+ const phase=sectionIndex/(sections.length-1);
+ camera.position.x+=(currentX*.7-camera.position.x)*.025;
+ camera.position.y+=((.1+currentY*.35+Math.sin(phase*Math.PI)*.18)-camera.position.y)*.025;
+ camera.position.z+=(8.2+phase*1.7-camera.position.z)*.018;
+ camera.lookAt(0,0,0);
+ composer.render();}
+animate(0);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<700?1.45:1.8));renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);bloom.setSize(innerWidth,innerHeight)});
 
-let mx=0,my=0,tx=0,ty=0;
-addEventListener("pointermove",e=>{tx=(e.clientX/innerWidth-.5)*.7;ty=(e.clientY/innerHeight-.5)*.45});
-const clock=new THREE.Clock();
-function animate(){
- requestAnimationFrame(animate);const t=clock.getElapsedTime();shaderUniforms.uTime.value=t;
- mx+=(tx-mx)*.035;my+=(ty-my)*.035;
- nexus.position.x=mx*.35;nexus.position.y=my*.2;
- camera.position.lerp(targetCam,.025);controls.target.lerp(targetLook,.025);controls.update();
- fallback.visible=!asset;
- fallback.rotation.x=t*.25;fallback.rotation.y=t*.45;
- shell.rotation.y=-t*.15;
- rings.children.forEach(r=>r.rotation.z+=r.userData.speed);
- pg.rotation.y=t*.008;
- composer.render();
-}
-animate();
-
-addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);bloom.setSize(innerWidth,innerHeight)});
-
-window.addEventListener("load",()=>setTimeout(()=>{const l=document.querySelector("#loader");l.style.opacity=0;setTimeout(()=>l.remove(),900)},1200));
-
-document.querySelector("#form").addEventListener("submit",e=>{
- e.preventDefault();document.querySelector("#status").textContent="Brief captured locally — connect your email/CRM endpoint before launch.";
-});
+// boot screen
+const boot=document.querySelector('#boot'),pct=document.querySelector('#bootPct'),bar=document.querySelector('.boot-line span');let p=0;const timer=setInterval(()=>{p=Math.min(100,p+Math.round(Math.random()*16)+4);pct.textContent=p+'%';bar.style.width=p+'%';if(p>=100){clearInterval(timer);setTimeout(()=>{boot.style.opacity='0';boot.style.visibility='hidden'},450)}},90);
