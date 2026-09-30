@@ -1,0 +1,125 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "VOXX NEXUS Studio"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "VOXX_NEXUS_CORE"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "VOXX_NEXUS_CORE",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "COLOR_0": 2
+          },
+          "indices": 1,
+          "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 0,
+            "COLOR_0": 2
+          },
+          "indices": 1,
+          "material": 1
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "CoreChrome",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.9,
+        "roughnessFactor": 0.18
+      },
+      "emissiveFactor": [
+        0.02,
+        0.18,
+        0.45
+      ]
+    },
+    {
+      "name": "InnerPulse",
+      "pbrMetallicRoughness": {
+        "metallicFactor": 0.75,
+        "roughnessFactor": 0.12
+      },
+      "emissiveFactor": [
+        0.25,
+        0.03,
+        0.65
+      ]
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "voxx-core.bin",
+      "byteLength": 432
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 144,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 144,
+      "byteLength": 96,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 240,
+      "byteLength": 192,
+      "target": 34962
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 12,
+      "type": "VEC3",
+      "min": [
+        -1,
+        -1.5,
+        -1
+      ],
+      "max": [
+        1,
+        1.5,
+        1
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5123,
+      "count": 48,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 12,
+      "type": "VEC4"
+    }
+  ]
+}
