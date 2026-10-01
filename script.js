@@ -1,0 +1,22 @@
+const THEMES=[
+["OBSIDIAN","#0a0a0a","#8eeeff","#f4f4f0"],["GRAPHITE","#151515","#c9d0d5","#f4f4f0"],["MIDNIGHT","#080d18","#6fa8ff","#f2f5ff"],["CARBON","#101010","#b58cff","#f5f0ff"],["DEEP OCEAN","#07151a","#5ee7dd","#efffff"],["DARK PLUM","#130c18","#d3a5ff","#fff5ff"],
+["PAPER","#f5f3ef","#111111","#161616"],["SNOW","#f8f8f6","#287cff","#101114"],["TITANIUM","#e7e9ea","#4d5962","#17191b"],["PEARL","#f3f0f7","#8559c7","#17131c"],["ICE","#eef7f8","#0aa9c1","#101718"],["SAND","#f2ede4","#7a4e22","#17120d"]
+];
+const root=document.documentElement, themeBtn=document.getElementById("themeBtn"), panel=document.getElementById("themePanel"), themeGrid=document.getElementById("themeGrid"), themeName=document.getElementById("themeName");
+THEMES.forEach((t,i)=>{const b=document.createElement("button");b.className="theme-choice";b.innerHTML=`<span class="swatch" style="background:${t[1]}"></span>${i+1}. ${t[0]}`;b.onclick=()=>setTheme(i);themeGrid.appendChild(b)});
+function setTheme(i){const t=THEMES[i],light=i>=6;root.style.setProperty("--bg",t[1]);root.style.setProperty("--accent",t[2]);root.style.setProperty("--text",t[3]);root.style.setProperty("--surface",light?"#ffffff":"#111");root.style.setProperty("--surface2",light?"#f1f1ef":"#171717");root.style.setProperty("--muted",light?"#686868":"#929292");root.style.setProperty("--line",light?"#d7d4ce":"#2a2a2a");root.style.setProperty("--button",light?"#151515":"#f5f5f0");root.style.setProperty("--buttonText",light?"#fff":"#090909");root.style.setProperty("--accent2",t[2]);themeName.textContent=t[0];localStorage.vxTheme=i;window.dispatchEvent(new CustomEvent("voxx-theme",{detail:{accent:t[2]}}))}
+setTheme(Number(localStorage.vxTheme||0));
+themeBtn.onclick=()=>panel.classList.toggle("open");document.getElementById("closeTheme").onclick=()=>panel.classList.remove("open");
+
+const cursor=document.getElementById("cursor");addEventListener("pointermove",e=>{cursor.style.left=e.clientX+"px";cursor.style.top=e.clientY+"px"});
+
+
+const KEY="voxxForumV1";let posts=JSON.parse(localStorage.getItem(KEY)||"[]");
+function save(){localStorage.setItem(KEY,JSON.stringify(posts))}
+function renderForum(){const el=document.getElementById("forum");if(!posts.length){el.innerHTML='<div class="empty-forum">NO BUILDS YET — START THE FIRST THREAD.</div>';return}el.innerHTML=posts.map((p,i)=>`<article class="forum-item" data-i="${i}"><span class="forum-num">${String(i+1).padStart(2,"0")}</span><div><h3>${esc(p.title)}</h3><p>${esc(p.body)}</p></div><div class="forum-meta">${esc(p.author)}<br>${p.comments.length} REPLIES</div></article>`).join("");el.querySelectorAll(".forum-item").forEach(x=>x.onclick=()=>openThread(Number(x.dataset.i)))}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+const postModal=document.getElementById("postModal"),threadModal=document.getElementById("threadModal");
+document.getElementById("newPostBtn").onclick=()=>postModal.classList.add("open");document.getElementById("closeModal").onclick=()=>postModal.classList.remove("open");document.getElementById("closeThread").onclick=()=>threadModal.classList.remove("open");
+document.getElementById("postForm").onsubmit=e=>{e.preventDefault();posts.unshift({title:postTitle.value.trim(),author:postAuthor.value.trim(),body:postBody.value.trim(),comments:[]});save();renderForum();e.target.reset();postModal.classList.remove("open")};
+function openThread(i){const p=posts[i],c=p.comments.map(x=>`<div class="thread-comment"><small>${esc(x.author)} · ${new Date(x.time).toLocaleString()}</small><p>${esc(x.body)}</p></div>`).join("");document.getElementById("threadContent").innerHTML=`<span class="section-label">BUILD THREAD</span><h2>${esc(p.title)}</h2><p style="color:var(--muted);line-height:1.6">${esc(p.body)}</p><div>${c||'<p style="color:var(--muted)">No replies yet.</p>'}</div><form class="comment-form" id="commentForm"><input id="commentAuthor" required maxlength="30" placeholder="Your name"><textarea id="commentBody" required maxlength="500" placeholder="Add a comment..."></textarea><button class="solid-btn">POST COMMENT ↗</button></form>`;threadModal.classList.add("open");document.getElementById("commentForm").onsubmit=e=>{e.preventDefault();p.comments.push({author:commentAuthor.value.trim(),body:commentBody.value.trim(),time:Date.now()});save();openThread(i);renderForum()}}
+renderForum();
